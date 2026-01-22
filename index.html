@@ -1,0 +1,558 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NeonGlass OS - Alarm Mode</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;700;900&family=Rajdhani:wght@300;500;700&display=swap');
+
+        :root {
+            --bg-dark: #050508;
+            --glass-bg: rgba(20, 20, 30, 0.65);
+            --glass-border: rgba(255, 255, 255, 0.1);
+            --neon-cyan: #00f3ff;
+            --neon-pink: #bc13fe;
+            --neon-green: #0aff00;
+            --neon-red: #ff003c;
+            --neon-amber: #ffbf00;
+            --text-main: #e0e0e0;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            background-color: var(--bg-dark);
+            background-image: radial-gradient(circle at 50% 50%, #1a1a2e 0%, #000 100%);
+            color: var(--text-main);
+            font-family: 'Rajdhani', sans-serif;
+            height: 100vh;
+            overflow: hidden;
+            display: flex; justify-content: center; align-items: center;
+        }
+
+        /* --- Glass Base --- */
+        .glass {
+            background: var(--glass-bg);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid var(--glass-border);
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.6);
+            border-radius: 12px;
+        }
+
+        .btn {
+            background: linear-gradient(135deg, rgba(255,255,255,0.05), transparent);
+            border: 1px solid var(--neon-cyan);
+            color: var(--neon-cyan);
+            padding: 10px 20px; font-family: 'Orbitron', sans-serif; cursor: pointer;
+            transition: 0.3s; text-transform: uppercase; letter-spacing: 1px; font-size: 0.8rem;
+            position: relative; overflow: hidden;
+        }
+        .btn:hover { background: var(--neon-cyan); color: #000; box-shadow: 0 0 20px var(--neon-cyan); }
+
+        /* --- Loader --- */
+        #loader-screen {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: #000; z-index: 9999;
+            display: flex; flex-direction: column; justify-content: center; align-items: center;
+        }
+        .loader-core {
+            width: 80px; height: 80px; border-radius: 50%;
+            background: var(--neon-cyan); box-shadow: 0 0 40px var(--neon-cyan);
+            animation: pulse-core 1s infinite alternate; margin-bottom: 30px;
+        }
+        @keyframes pulse-core { from { transform: scale(1); } to { transform: scale(1.1); } }
+        .progress-bar { width: 300px; height: 4px; background: #222; border-radius: 2px; overflow: hidden; margin-bottom: 10px; }
+        .progress-fill { height: 100%; background: var(--neon-cyan); width: 0%; transition: width 0.2s; box-shadow: 0 0 10px var(--neon-cyan); }
+
+        /* --- Alarm Overlay (The New Design) --- */
+        #alarm-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(20, 0, 0, 0.8); z-index: 6000;
+            display: none; flex-direction: column; justify-content: center; align-items: center;
+            backdrop-filter: blur(5px);
+        }
+        .alarm-container {
+            text-align: center; border: 2px solid var(--neon-red);
+            box-shadow: 0 0 50px var(--neon-red), inset 0 0 50px rgba(255, 0, 60, 0.2);
+            padding: 60px; border-radius: 20px; animation: shake 0.5s infinite;
+        }
+        @keyframes shake {
+            0% { transform: translate(1px, 1px) rotate(0deg); }
+            10% { transform: translate(-1px, -2px) rotate(-1deg); }
+            20% { transform: translate(-3px, 0px) rotate(1deg); }
+            30% { transform: translate(3px, 2px) rotate(0deg); }
+            40% { transform: translate(1px, -1px) rotate(1deg); }
+            50% { transform: translate(-1px, 2px) rotate(-1deg); }
+            60% { transform: translate(-3px, 1px) rotate(0deg); }
+            70% { transform: translate(3px, 1px) rotate(-1deg); }
+            80% { transform: translate(-1px, -1px) rotate(1deg); }
+            90% { transform: translate(1px, 2px) rotate(0deg); }
+            100% { transform: translate(1px, -2px) rotate(-1deg); }
+        }
+        .alarm-icon { font-size: 5rem; margin-bottom: 20px; color: var(--neon-red); text-shadow: 0 0 30px var(--neon-red); animation: flash 0.5s infinite alternate; }
+        @keyframes flash { from { opacity: 0.5; } to { opacity: 1; text-shadow: 0 0 50px red; } }
+        .alarm-instruction {
+            font-size: 1.5rem; color: white; margin-top: 20px;
+            border-top: 1px solid var(--neon-red); padding-top: 20px;
+            text-transform: uppercase; letter-spacing: 2px;
+        }
+        .listening-wave {
+            display: flex; justify-content: center; gap: 5px; margin-top: 30px; height: 30px; align-items: center;
+        }
+        .wave-bar { width: 6px; background: var(--neon-red); animation: wave 1s infinite ease-in-out; }
+        .wave-bar:nth-child(1) { animation-delay: 0.0s; height: 10px; }
+        .wave-bar:nth-child(2) { animation-delay: 0.1s; height: 20px; }
+        .wave-bar:nth-child(3) { animation-delay: 0.2s; height: 30px; }
+        .wave-bar:nth-child(4) { animation-delay: 0.3s; height: 20px; }
+        .wave-bar:nth-child(5) { animation-delay: 0.4s; height: 10px; }
+        @keyframes wave { 0%, 100% { transform: scaleY(0.5); } 50% { transform: scaleY(1.5); } }
+
+        /* --- Login --- */
+        #login-page { display: none; position: absolute; width: 100%; height: 100%; justify-content: center; align-items: center; z-index: 5000; background: radial-gradient(circle, #111, #000); }
+        .login-box { padding: 50px; width: 350px; text-align: center; border: 1px solid var(--neon-pink); box-shadow: 0 0 30px rgba(188, 19, 254, 0.2); }
+        input { background: rgba(0,0,0,0.5); border: 1px solid var(--glass-border); color: white; padding: 15px; border-radius: 6px; width: 100%; margin-bottom: 20px; font-family: 'Orbitron'; outline: none; text-align: center; }
+        input:focus { border-color: var(--neon-pink); box-shadow: 0 0 15px rgba(188, 19, 254, 0.4); }
+
+        /* --- App Layout --- */
+        #app-container { display: none; width: 100%; height: 100%; flex-direction: row; }
+        aside { width: 260px; background: rgba(0,0,0,0.5); border-right: 1px solid var(--glass-border); padding: 20px; display: flex; flex-direction: column; gap: 15px; }
+        .brand { font-family: 'Orbitron'; font-size: 1.5rem; text-align: center; margin-bottom: 30px; color: white; text-shadow: 0 0 10px var(--neon-cyan); }
+        .nav-btn { padding: 15px; color: #888; cursor: pointer; border-left: 3px solid transparent; transition: 0.3s; display: flex; align-items: center; gap: 10px; }
+        .nav-btn:hover, .nav-btn.active { background: rgba(255,255,255,0.05); color: white; border-left-color: var(--neon-cyan); padding-left: 25px; }
+        .nav-btn.active { color: var(--neon-cyan); text-shadow: 0 0 10px var(--neon-cyan); }
+
+        main { flex: 1; padding: 20px; overflow-y: auto; position: relative; }
+        .view { display: none; animation: fadeIn 0.5s; }
+        .view.active { display: block; }
+        @keyframes fadeIn { from { opacity: 0; transform: scale(0.98); } to { opacity: 1; transform: scale(1); } }
+
+        /* --- Components Styling --- */
+        /* Excel */
+        .excel-wrap { overflow: auto; height: 70vh; border: 1px solid var(--glass-border); border-radius: 8px; }
+        table { border-collapse: collapse; width: 100%; min-width: 800px; }
+        th { background: rgba(0, 243, 255, 0.1); color: var(--neon-cyan); padding: 12px; border: 1px solid var(--glass-border); font-family: 'Orbitron'; }
+        td { padding: 10px; border: 1px solid var(--glass-border); background: rgba(255,255,255,0.02); min-width: 120px; transition: 0.2s; color: #ddd; }
+        td:focus { background: rgba(0, 243, 255, 0.2); outline: none; box-shadow: inset 0 0 15px rgba(0, 243, 255, 0.2); }
+
+        /* Word */
+        .word-toolbar { display: flex; gap: 10px; margin-bottom: 15px; padding: 10px; border-bottom: 1px solid var(--glass-border); }
+        .word-page { min-height: 70vh; background: rgba(255,255,255,0.96); color: #111; padding: 40px; border-radius: 4px; box-shadow: 0 0 40px rgba(0,0,0,0.5); outline: none; line-height: 1.6; }
+
+        /* Notes */
+        .notes-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 20px; }
+        .note-card { background: rgba(255,255,200,0.05); border: 1px solid rgba(255,255,200,0.1); padding: 15px; min-height: 200px; border-radius: 10px; position: relative; transition: 0.3s; }
+        .note-card:hover { border-color: var(--neon-amber); transform: translateY(-5px); box-shadow: 0 10px 20px rgba(0,0,0,0.5); }
+
+        /* AI */
+        .ai-grid { display: grid; grid-template-columns: 250px 1fr; gap: 20px; height: 75vh; }
+        .ai-btn { padding: 15px; border: 1px solid var(--glass-border); cursor: pointer; display: flex; align-items: center; gap: 10px; transition: 0.2s; border-radius: 8px; }
+        .ai-btn:hover, .ai-btn.active { background: rgba(255,255,255,0.05); border-color: var(--neon-cyan); color: white; }
+        
+        .circle-ui { display: none; height: 100%; flex-direction: column; justify-content: center; align-items: center; }
+        .orb { width: 140px; height: 140px; border-radius: 50%; border: 3px solid var(--neon-cyan); box-shadow: 0 0 40px var(--neon-cyan); display: flex; justify-content: center; align-items: center; cursor: pointer; transition: 0.3s; font-size: 3rem; }
+        .orb:hover { transform: scale(1.05); box-shadow: 0 0 60px var(--neon-cyan); }
+        .orb.listening { border-color: var(--neon-red); box-shadow: 0 0 60px var(--neon-red); animation: pulse-fast 0.5s infinite; }
+
+        /* Calc */
+        .calc-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; max-width: 400px; margin: 0 auto; }
+        .calc-dsp { background: #000; border: 1px solid var(--neon-cyan); color: var(--neon-cyan); font-family: 'Orbitron'; padding: 20px; text-align: right; font-size: 2rem; margin-bottom: 15px; border-radius: 8px; box-shadow: inset 0 0 15px rgba(0,243,255,0.3); }
+        .calc-btn { padding: 18px; background: rgba(255,255,255,0.05); border: none; color: white; font-size: 1.2rem; cursor: pointer; border-radius: 4px; transition: 0.2s; }
+        .calc-btn:hover { background: var(--neon-cyan); color: black; box-shadow: 0 0 10px var(--neon-cyan); }
+
+        /* Files */
+        .file-card { padding: 20px; text-align: center; cursor: pointer; transition: 0.3s; border: 1px solid var(--glass-border); border-radius: 8px; background: rgba(255,255,255,0.02); position: relative; }
+        .file-card:hover { border-color: var(--neon-green); background: rgba(10, 255, 0, 0.05); transform: translateY(-3px); }
+        .file-card.active { border-color: var(--neon-green); box-shadow: 0 0 15px rgba(10,255,0,0.3); }
+
+    </style>
+</head>
+<body>
+
+    <!-- --- ALARM OVERLAY (Hidden initially) --- -->
+    <div id="alarm-overlay">
+        <div class="alarm-container">
+            <div class="alarm-icon">🚨</div>
+            <h1 style="color: var(--neon-red); font-family: 'Orbitron'; font-size: 3rem; letter-spacing: 5px; text-shadow: 0 0 20px red;">WAKE UP</h1>
+            
+            <div class="listening-wave">
+                <div class="wave-bar"></div>
+                <div class="wave-bar"></div>
+                <div class="wave-bar"></div>
+                <div class="wave-bar"></div>
+                <div class="wave-bar"></div>
+            </div>
+
+            <div class="alarm-instruction">
+                SAY "<span style="color: var(--neon-cyan); font-weight: bold;">STUDENT</span>" TO STOP
+            </div>
+            <p style="margin-top: 10px; color: #aaa; font-size: 0.9rem;">Listening for keyword...</p>
+        </div>
+    </div>
+
+    <!-- --- LOADER --- -->
+    <div id="loader-screen">
+        <div class="loader-core"></div>
+        <div class="progress-bar"><div class="progress-fill" id="fill"></div></div>
+        <div style="font-family: 'Orbitron'; color: var(--neon-cyan); letter-spacing: 2px;" id="load-txt">LOADING...</div>
+    </div>
+
+    <!-- --- LOGIN --- -->
+    <div id="login-page">
+        <div class="glass login-box">
+            <h1 style="font-family: 'Orbitron'; color: white; margin-bottom: 10px;">STUDENT OS</h1>
+            <p style="color: #666; margin-bottom: 30px; font-size: 0.8rem;">SECURE ACCESS TERMINAL</p>
+            <input type="text" id="username" placeholder="ENTER CODENAME">
+            <button class="btn" style="width: 100%; margin-top: 10px;" onclick="attemptLogin()">LOGIN</button>
+        </div>
+    </div>
+
+    <!-- --- APP --- -->
+    <div id="app-container">
+        <aside>
+            <div class="brand">NEON<span style="color:var(--neon-pink)">GLASS</span></div>
+            <button class="nav-btn active" onclick="nav('dashboard')">🏠 Dashboard</button>
+            <button class="nav-btn" onclick="nav('excel')">📊 Timetable</button>
+            <button class="nav-btn" onclick="nav('word')">📝 Word Doc</button>
+            <button class="nav-btn" onclick="nav('notes')">📌 Notes</button>
+            <button class="nav-btn" onclick="nav('ai')">🤖 AI Core</button>
+            <button class="nav-btn" onclick="nav('calc')">🧮 Calc</button>
+            <button class="nav-btn" onclick="nav('files')">💾 Files</button>
+            <div style="flex:1"></div>
+            <button class="nav-btn" style="color: var(--neon-red);" onclick="location.reload()">🚪 LOGOUT</button>
+        </aside>
+
+        <main>
+            <!-- Dashboard -->
+            <section id="dashboard" class="view active glass" style="padding: 40px; text-align: center; margin-top: 20px;">
+                <h1 style="color: white; font-family: 'Orbitron';">SYSTEM ONLINE</h1>
+                <p id="user-disp" style="color: #888; margin-bottom: 30px;">Welcome</p>
+                <div style="display: flex; justify-content: center; gap: 20px;">
+                    <div class="glass" style="padding: 20px; width: 180px; cursor: pointer; border: 1px solid var(--neon-cyan);" onclick="nav('files')">
+                        <span style="font-size: 2rem; display: block;">💾</span>
+                        <h3 style="color: var(--neon-cyan);">FILES</h3>
+                    </div>
+                    <div class="glass" style="padding: 20px; width: 180px; cursor: pointer; border: 1px solid var(--neon-pink);" onclick="nav('ai')">
+                        <span style="font-size: 2rem; display: block;">🤖</span>
+                        <h3 style="color: var(--neon-pink);">AI ASSIST</h3>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Excel -->
+            <section id="excel" class="view">
+                <div style="display: flex; justify-content: space-between; margin-bottom: 15px;">
+                    <h2 style="color: var(--neon-cyan);">TIMETABLE / DATA</h2>
+                    <button class="btn" style="border-color: var(--neon-green); color: var(--neon-green);" onclick="saveCur()">SAVE</button>
+                </div>
+                <div class="excel-wrap glass">
+                    <table id="sheet-table"></table>
+                </div>
+            </section>
+
+            <!-- Word -->
+            <section id="word" class="view">
+                <div style="display: flex; justify-content: space-between; margin-bottom: 15px;">
+                    <h2 style="color: var(--neon-pink);">DOCUMENT EDITOR</h2>
+                    <div style="display: flex; gap: 10px;">
+                         <label class="btn">📷 IMG <input type="file" hidden onchange="insImg(this)" accept="image/*"></label>
+                         <button class="btn" style="border-color: var(--neon-green); color: var(--neon-green);" onclick="saveCur()">SAVE</button>
+                    </div>
+                </div>
+                <div class="word-toolbar glass">
+                    <button class="btn" onclick="exec('bold')">B</button>
+                    <button class="btn" onclick="exec('italic')">I</button>
+                    <button class="btn" onclick="exec('underline')">U</button>
+                </div>
+                <div class="word-page" id="word-editor" contenteditable="true"><h1>New Document</h1><p>Write here...</p></div>
+            </section>
+
+            <!-- Notes -->
+            <section id="notes" class="view">
+                <div style="display: flex; justify-content: space-between; margin-bottom: 15px;">
+                    <h2 style="color: var(--neon-amber);">QUICK NOTES</h2>
+                    <div style="display: flex; gap: 10px;">
+                        <button class="btn" onclick="addNote()">+ NEW</button>
+                        <button class="btn" style="border-color: var(--neon-green); color: var(--neon-green);" onclick="saveCur()">SAVE ALL</button>
+                    </div>
+                </div>
+                <div class="notes-grid" id="notes-area"></div>
+            </section>
+
+            <!-- AI -->
+            <section id="ai" class="view">
+                <div class="ai-grid">
+                    <div class="glass" style="padding: 15px; display: flex; flex-direction: column; gap: 10px;">
+                        <div class="ai-btn active" onclick="setAI(0,'circle')">👩 Sarah (Voice)</div>
+                        <div class="ai-btn" onclick="setAI(1,'chat')">🎓 Prof (Type)</div>
+                        <div class="ai-btn" onclick="setAI(2,'chat')">📝 Swift (Type)</div>
+                        <div class="ai-btn" onclick="setAI(3,'circle')">😎 Bestie (Voice)</div>
+                    </div>
+
+                    <div class="glass" style="padding: 20px; display: flex; flex-direction: column;">
+                        <div id="circle-interface" class="circle-ui">
+                            <div class="orb" id="ai-orb" onclick="voiceAI()">🎙️</div>
+                            <h3 id="orb-status" style="margin-top: 20px; color: white;">TAP TO TALK</h3>
+                        </div>
+                        <div id="chat-interface" class="chat-ui" style="display: none; height: 100%; flex-direction: column;">
+                            <div style="flex:1; overflow-y:auto; background: rgba(0,0,0,0.3); border-radius: 8px; padding: 10px; margin-bottom: 10px;" id="chat-box"></div>
+                            <div style="display: flex; gap: 10px;">
+                                <input type="text" id="chat-inp" placeholder="Type..." onkeypress="if(event.key==='Enter')chatMsg()">
+                                <button class="btn" onclick="chatMsg()">SEND</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Calc -->
+            <section id="calc" class="view">
+                <div class="glass" style="max-width: 420px; margin: 0 auto; padding: 20px;">
+                    <div class="calc-dsp" id="calc-sc">0</div>
+                    <div class="calc-grid">
+                        <button class="calc-btn" onclick="cIn('C')">AC</button>
+                        <button class="calc-btn" onclick="cIn('DEL')">DEL</button>
+                        <button class="calc-btn" onclick="cIn('(')">(</button>
+                        <button class="calc-btn" onclick="cIn(')')">)</button>
+                        <button class="calc-btn" onclick="cIn('7')">7</button>
+                        <button class="calc-btn" onclick="cIn('8')">8</button>
+                        <button class="calc-btn" onclick="cIn('9')">9</button>
+                        <button class="calc-btn" onclick="cIn('/')">÷</button>
+                        <button class="calc-btn" onclick="cIn('4')">4</button>
+                        <button class="calc-btn" onclick="cIn('5')">5</button>
+                        <button class="calc-btn" onclick="cIn('6')">6</button>
+                        <button class="calc-btn" onclick="cIn('*')">×</button>
+                        <button class="calc-btn" onclick="cIn('1')">1</button>
+                        <button class="calc-btn" onclick="cIn('2')">2</button>
+                        <button class="calc-btn" onclick="cIn('3')">3</button>
+                        <button class="calc-btn" onclick="cIn('-')">-</button>
+                        <button class="calc-btn" onclick="cIn('0')">0</button>
+                        <button class="calc-btn" onclick="cIn('.')">.</button>
+                        <button class="calc-btn" style="grid-column: span 2; background: var(--neon-green); color: black;" onclick="cIn('=')">=</button>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Files -->
+            <section id="files" class="view">
+                <div class="glass" style="padding: 30px;">
+                    <h2 class="neon-text-cyan" style="margin-bottom: 20px; color: var(--neon-cyan);">CLOUD STORAGE</h2>
+                    <div style="display: flex; gap: 10px; margin-bottom: 30px; background: rgba(0,0,0,0.3); padding: 15px; border-radius: 8px;">
+                        <input type="text" id="new-fn" placeholder="File Name" style="flex:2; margin:0;">
+                        <select id="new-ft" style="flex:1; margin:0;"><option value="all">All</option><option value="sheet">Sheet</option><option value="doc">Doc</option><option value="note">Notes</option></select>
+                        <button class="btn" onclick="createFile()">NEW</button>
+                    </div>
+                    <div id="file-list" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 20px;"></div>
+                </div>
+            </section>
+
+        </main>
+    </div>
+
+    <script>
+        // --- INIT & LOADER ---
+        window.onload = () => {
+            const fill = document.getElementById('fill');
+            let w = 0;
+            const itv = setInterval(() => {
+                w += 2; fill.style.width = w + "%";
+                if(w>=100) {
+                    clearInterval(itv);
+                    document.getElementById('loader-screen').style.opacity = '0';
+                    setTimeout(() => {
+                        document.getElementById('loader-screen').style.display = 'none';
+                        document.getElementById('login-page').style.display = 'flex';
+                    }, 500);
+                }
+            }, 30);
+            initSystem();
+        };
+
+        // --- GLOBALS ---
+        let userFiles = JSON.parse(localStorage.getItem('s_os_files') || '{}');
+        let curFile = null;
+        let aiIdx = 0;
+        let synth = window.speechSynthesis;
+        let recognition;
+        if('webkitSpeechRecognition' in window) {
+            recognition = new webkitSpeechRecognition();
+            recognition.continuous = false;
+            recognition.interimResults = false;
+        }
+
+        function initSystem() {
+            initSheet();
+            addNote();
+            renderFiles();
+        }
+
+        // --- ALARM SYSTEM ---
+        let audioCtx, osc, gainNode;
+        
+        function startAlarm() {
+            // Show Alarm Overlay
+            document.getElementById('login-page').style.display = 'none';
+            document.getElementById('alarm-overlay').style.display = 'flex';
+
+            // Start Sound
+            audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            gainNode = audioCtx.createGain();
+            osc = audioCtx.createOscillator();
+            
+            osc.type = 'square'; // Harsh sound for alarm
+            osc.frequency.setValueAtTime(440, audioCtx.currentTime); // A4
+            
+            // Pulse effect for sound
+            gainNode.gain.setValueAtTime(0.1, audioCtx.currentTime);
+            osc.connect(gainNode);
+            gainNode.connect(audioCtx.destination);
+            osc.start();
+
+            // Modulate sound for siren effect
+            setInterval(() => {
+                if(osc) {
+                    const freq = osc.frequency.value === 440 ? 880 : 440;
+                    osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+                }
+            }, 500);
+
+            // Start Listening for "Student"
+            listenForStudent();
+        }
+
+        function listenForStudent() {
+            if(!recognition) return;
+            recognition.lang = 'en-US';
+            recognition.start();
+
+            recognition.onresult = (e) => {
+                const text = e.results[0][0].transcript.toLowerCase();
+                console.log("Heard:", text);
+                if(text.includes('student')) {
+                    stopAlarm();
+                } else {
+                    // If stopped but alarm still on, restart recognition
+                    recognition.start();
+                }
+            };
+            recognition.onerror = () => {
+                if(document.getElementById('alarm-overlay').style.display === 'flex') {
+                    setTimeout(() => recognition.start(), 500);
+                }
+            }
+        }
+
+        function stopAlarm() {
+            if(osc) osc.stop();
+            if(audioCtx) audioCtx.close();
+            document.getElementById('alarm-overlay').style.display = 'none';
+            document.getElementById('app-container').style.display = 'flex';
+        }
+
+        function attemptLogin() {
+            const name = document.getElementById('username').value;
+            if(!name) return;
+            document.getElementById('user-disp').innerText = "USER: " + name.toUpperCase();
+            startAlarm(); // TRIGGER ALARM
+        }
+
+        // --- NAVIGATION & CORE ---
+        function nav(id) {
+            document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+            document.getElementById(id).classList.add('active');
+            document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+            event.currentTarget.classList.add('active');
+        }
+
+        // --- FILES & SAVE ---
+        function renderFiles() {
+            const c = document.getElementById('file-list'); c.innerHTML = '';
+            Object.keys(userFiles).forEach(k => {
+                const f = userFiles[k];
+                const div = document.createElement('div');
+                div.className = `glass file-card ${curFile && curFile.id === k ? 'active' : ''}`;
+                div.innerHTML = `<div style="font-size:2rem">${f.type==='sheet'?'📊':f.type==='doc'?'📝':'📦'}</div><div>${k}</div>`;
+                div.onclick = () => loadFile(k);
+                c.appendChild(div);
+            });
+        }
+        function createFile() {
+            const n = document.getElementById('new-fn').value.trim();
+            const t = document.getElementById('new-ft').value;
+            if(!n || userFiles[n]) return;
+            userFiles[n] = { type: t, data: { sheet: initSheetHTML(), doc: "<h1>Doc</h1>", notes: "" } };
+            localStorage.setItem('s_os_files', JSON.stringify(userFiles));
+            renderFiles(); loadFile(n);
+            document.getElementById('new-fn').value = '';
+        }
+        function loadFile(name) {
+            curFile = { id: name, ...userFiles[name] };
+            renderFiles();
+            const d = curFile.data;
+            if(curFile.type === 'sheet' || curFile.type === 'all') document.getElementById('sheet-table').innerHTML = d.sheet;
+            if(curFile.type === 'doc' || curFile.type === 'all') document.getElementById('word-editor').innerHTML = d.doc;
+            if(curFile.type === 'note' || curFile.type === 'all') document.getElementById('notes-area').innerHTML = d.notes;
+            
+            // Auto navigate
+            if(curFile.type === 'sheet') navTo('excel');
+            else if(curFile.type === 'doc') navTo('word');
+            else if(curFile.type === 'note') navTo('notes');
+        }
+        function navTo(id) {
+            document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+            document.getElementById(id).classList.add('active');
+        }
+        function saveCur() {
+            if(!curFile) return;
+            const d = curFile.data;
+            const t = curFile.type;
+            if(t==='sheet'||t==='all') d.sheet = document.getElementById('sheet-table').innerHTML;
+            if(t==='doc'||t==='all') d.doc = document.getElementById('word-editor').innerHTML;
+            if(t==='note'||t==='all') d.notes = document.getElementById('notes-area').innerHTML;
+            userFiles[curFile.id] = curFile;
+            localStorage.setItem('s_os_files', JSON.stringify(userFiles));
+            alert("SAVED");
+        }
+
+        // --- TOOLS ---
+        function initSheetHTML() {
+            let h='<tr><th></th>'; for(let i=0;i<8;i++)h+=`<th>${String.fromCharCode(65+i)}</th>`; h+='</tr>';
+            for(let r=1;r<=20;r++){h+=`<tr><td>${r}</td>`; for(let c=0;c<8;c++)h+=`<td contenteditable="true"></td>`; h+='</tr>';}
+            return h;
+        }
+        function initSheet(){ document.getElementById('sheet-table').innerHTML = initSheetHTML(); }
+        function exec(c){ document.execCommand(c,false,null); }
+        function insImg(i){ if(i.files[0]){ const r=new FileReader(); r.onload=e=>document.execCommand('insertHTML',false,`<img src="${e.target.result}" style="max-width:100%">`); r.readAsDataURL(i.files[0]); }}
+        function addNote(){ document.getElementById('notes-area').innerHTML+=`<div class="note-card"><textarea style="background:transparent;border:none;width:100%;height:150px;color:white;resize:none;"></textarea></div>`; }
+        let cExp=""; function cIn(v){ const s=document.getElementById('calc-sc'); if(v==='C'){cExp="";s.innerText="0";return;} if(v==='DEL'){cExp=cExp.slice(0,-1);s.innerText=cExp||"0";return;} if(v==='='){ try{s.innerText=eval(cExp);cExp=s.innerText}catch{s.innerText="ERR";cExp="";}return;} cExp+=v;s.innerText=cExp; }
+
+        // --- AI ---
+        function setAI(idx, ui) {
+            aiIdx=idx; document.querySelectorAll('.ai-btn').forEach(b=>b.classList.remove('active')); event.currentTarget.classList.add('active');
+            document.getElementById('circle-interface').style.display=ui==='circle'?'flex':'none';
+            document.getElementById('chat-interface').style.display=ui==='chat'?'flex':'none';
+            document.getElementById('chat-box').innerHTML=`<div style="color:var(--neon-cyan); margin-bottom:10px;">Ready.</div>`;
+        }
+        function chatMsg(){
+            const i=document.getElementById('chat-inp').value.trim(); if(!i) return;
+            document.getElementById('chat-box').innerHTML+=`<div style="text-align:right; color:var(--neon-pink); margin-bottom:5px;">${i}</div>`;
+            document.getElementById('chat-inp').value='';
+            setTimeout(()=>document.getElementById('chat-box').innerHTML+=`<div style="color:var(--neon-cyan);">Response received.</div>`, 500);
+        }
+        function voiceAI(){
+            if(!recognition) return;
+            recognition.start();
+            document.getElementById('ai-orb').classList.add('listening');
+            document.getElementById('orb-status').innerText="LISTENING...";
+            recognition.onresult=e=>{
+                const t=e.results[0][0].transcript;
+                document.getElementById('orb-status').innerText=`YOU: ${t}`;
+                synth.speak(new SpeechSynthesisUtterance("I heard " + t));
+                document.getElementById('ai-orb').classList.remove('listening');
+            }
+        }
+
+    </script>
+</body>
+</html>
